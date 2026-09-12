@@ -1,0 +1,1 @@
+simple factory simulation here, would make more changes later on
