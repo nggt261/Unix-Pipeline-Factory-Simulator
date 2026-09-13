@@ -12,4 +12,4 @@ set(SOURCES
 
 add_executable(CompilerTest ${SOURCES})
 
-target_link_libraries(CompilerTest PRIVATE raylib)
+target_link_libraries(CompilerTest PRIVATE raylib m)

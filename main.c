@@ -3,11 +3,26 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <math.h>
+#include <time.h>
 
+//represents box moving through the line
 typedef struct{
-    int item_id;
-    double generation_timestamp;
+    int item_id;    //box no (eg: #1 -> #2 -> #3 -> etc)
+    double generation_timestamp;    //generates time spent building the item
 }Material;
+
+//simulates exponential/poisson
+int get_exp_delay(double lambda){
+    double u;
+    do{
+        u=(double)rand()/RAND_MAX; //gives values from 0 to 1
+    }while(u==0.0);
+    //apllying inverse transform sampling
+    double delay_in_sec=-log(u)/lambda;
+    //converts sec to ms for usleep()
+    return (int)(delay_in_sec*1000000.0);
+}
 
 int main(){
     //for holding read/write file desc
@@ -34,6 +49,23 @@ int main(){
         close(pipe_b[1]); //lock write door of B
 
         printf("Supplier A online. Ready to generate material.\n");
+
+        //random seed here
+        srand(time(NULL)^getpid());
+
+        int item_counter=1;
+        double lambda_A=2.0; //2 items per second
+
+        while(1){
+            Material mat;
+            mat.item_id=item_counter++;
+
+            write(pipe_a[1], &mat, sizeof(Material));
+            printf("[SUPPLIER A] Sent Item #%d into the queue.\n", mat.item_id);
+
+            int delay=get_exp_delay(lambda_A);
+            usleep(delay);
+        }
         exit(0);
     }
 
@@ -44,6 +76,22 @@ int main(){
         close(pipe_a[0]);
         close(pipe_a[1]);
         printf("Supplier B online. Ready to generate material.\n");
+
+        //same things here like supplier a
+        srand(time(NULL)^getpid());
+        int item_counter=1;
+        double lambda_B=1.0;
+
+        while(1){
+            Material mat;
+            mat.item_id=item_counter++;
+
+            write(pipe_b[1], &mat, sizeof(Material));
+            printf("[SUPPLIER B] Sent Item #%d into the queue.\n", mat.item_id);
+
+            int delay=get_exp_delay(lambda_B);
+            usleep(delay);
+        }
         exit(0);
     }
 
